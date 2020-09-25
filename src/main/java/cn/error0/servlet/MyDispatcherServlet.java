@@ -1,5 +1,11 @@
 package cn.error0.servlet;
 
+import cn.error0.Annotation.Autowire;
+import cn.error0.Annotation.Controller;
+import cn.error0.Annotation.Service;
+import cn.error0.controller.UserController;
+import cn.error0.services.Impl.UserServiceImpl;
+import cn.error0.services.UserService;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Element;
@@ -14,13 +20,14 @@ import javax.servlet.http.HttpServletResponse;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
+import java.lang.reflect.Field;
 import java.util.*;
-import java.util.regex.Matcher;
 
 public class MyDispatcherServlet extends HttpServlet {
 
     private static List<String> PagesPath=new ArrayList<>();
+    private static List<String> Names=new ArrayList<>();
+    private static Map<String,Object> Singleton=new HashMap<>();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -40,11 +47,43 @@ public class MyDispatcherServlet extends HttpServlet {
         //扫描注解
         doScan();
         //IOC注入
-//        ioc();
+        ioc();
+
         //映射url
 //        HeaderMap();
 
     }
+
+    private void ioc() {
+
+        for(String name:Names)
+        {
+            try {
+                Class aclass = Class.forName(name);
+                Object bean=aclass.newInstance();
+                Field[] fields = bean.getClass().getDeclaredFields();
+                for(Field field:fields)
+                {
+                    if(field.isAnnotationPresent(Autowire.class))
+                    {
+                        String fieldName=field.getType().getName();
+                         Object object=Singleton.get(fieldName);
+//                        UserService object=new UserServiceImpl();
+                         if(object!=null)
+                         {
+                             field.setAccessible(true);
+                             field.set(object,null);
+                         }
+                    }
+                }
+
+            } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
+                e.printStackTrace();
+            }
+        }
+
+    }
+
     private void loadConfig(String parameter)   {
         SAXReader reader = new SAXReader();
         try {
@@ -60,39 +99,75 @@ public class MyDispatcherServlet extends HttpServlet {
         }
     }
     private void doScan() {
-        //1、读取class文件路径
-        //2、反射类读取读取注解
-        if(PagesPath.isEmpty())
-        {
+        //1、读取class文件路径获取全限定名
+        //2、扫描注解
+        if (PagesPath.isEmpty()) {
             return;
         }
-        for(int i=0;i<PagesPath.size();i++)
-        {
+        String root = Thread.currentThread().getContextClassLoader().getResource("").getPath();
+        for (int i = 0; i < PagesPath.size(); i++) {
+            String path = PagesPath.get(i).replaceAll("\\.", "/");
+            readFile(root + path);
+        }
+        for (int i = 0; i < Names.size(); i++) {
+            try {
+                Class aclass = Class.forName(Names.get(i));
+                if (aclass.isAnnotationPresent(Service.class)) {
+                    Class[] interfaces = aclass.getInterfaces();
+                    for (Class c : interfaces) {
+                        Singleton.put(c.getName(),aclass.newInstance());
+                    }
+                }
+                else if (aclass.isAnnotationPresent(Controller.class)) {
+                    Singleton.put(aclass.getName(),aclass.newInstance());
+                }
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            } catch (InstantiationException e) {
+                e.printStackTrace();
+            }
 
-            String root=Thread.currentThread().getContextClassLoader().getResource("").getPath();
-            String path=PagesPath.get(i).replaceAll("\\.", "/");
-            readFile(root+path);
         }
     }
-
     private void readFile(String path) {
         File filePath=new File(path);
-        System.out.println(path);
-        List<File> files= new ArrayList<>(Arrays.asList(filePath.listFiles()));
-        for(File file:files)
+        List<File> files= new LinkedList<>();
+        files.add(filePath);
+
+        for(int i=0;i<files.size();i++)
         {
-            if(file.isDirectory())
+            if(files.get(i).isDirectory())
             {
-                files.add(file);
+                File[] dir=files.get(i).listFiles();
+                for(File item:dir)
+                {
+                    files.add(item);
+                }
             }
             else {
-                if(file.getName().endsWith(".class"))
+                if(files.get(i).getName().endsWith(".class"))
                 {
-                    System.out.println(file.getName());
+                    String ClassPath=files.get(i).getPath();
+                    String classes="\\classes\\";
+                    String name=ClassPath.substring(ClassPath.indexOf(classes)+classes.length(),ClassPath.lastIndexOf(".")).replace("\\",".");
+                    Names.add(name);
                 }
             }
         }
 
+    }
+
+    private String lower(char[] str) {
+        for(int i=0;i<str.length;i++)
+        {
+            if(str[i]>='A'&&str[i]<='Z')
+            {
+                str[i]+=32;
+            }
+        }
+        return new String(str);
     }
 
 }
