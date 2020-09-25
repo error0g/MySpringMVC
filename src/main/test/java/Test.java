@@ -12,24 +12,25 @@ import java.util.regex.Matcher;
 public class Test {
 
    @org.junit.Test
-    public void getPropertyTest() throws IllegalAccessException, InstantiationException {
+    public void getPropertyTest() throws IllegalAccessException, InstantiationException, ClassNotFoundException {
 
         Map<String,Object> map= new HashMap();
-        map.put("cn.error.userService",UserServiceImpl.class.newInstance());
 
+       Class cl=Class.forName("cn.error0.controller.UserController");
+       Object object=cl.newInstance();
+       System.out.println(object);
         Field[] declaredFields =UserController.class.getDeclaredFields();
         for(Field field:declaredFields)
         {
+            field.setAccessible(true);
                 if(field.isAnnotationPresent(Autowire.class))
                 {
-                    for(Map.Entry entry:map.entrySet())
-                    {
-                      field.setAccessible(true);
-                        field.set(map.get("cn.error.userService"),null);
-                    }
-//                    System.out.println(field.getType().);
+                    field.set(object,UserServiceImpl.class.newInstance());
+
                 }
         }
+        UserController controller= (UserController) object;
+       System.out.println( controller.getUser());
 
     }
 }

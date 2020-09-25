@@ -2,6 +2,7 @@ package cn.error0.servlet;
 
 import cn.error0.Annotation.Autowire;
 import cn.error0.Annotation.Controller;
+import cn.error0.Annotation.Mapping;
 import cn.error0.Annotation.Service;
 import cn.error0.controller.UserController;
 import cn.error0.services.Impl.UserServiceImpl;
@@ -20,23 +21,48 @@ import javax.servlet.http.HttpServletResponse;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.*;
 
 public class MyDispatcherServlet extends HttpServlet {
 
-    private static List<String> PagesPath=new ArrayList<>();
+    private static List<String> Path=new ArrayList<>();
     private static List<String> Names=new ArrayList<>();
     private static Map<String,Object> Singleton=new HashMap<>();
+    private static Map<String,Object> HandlerMapping=new HashMap<>();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        super.doGet(req, resp);
+        this.doPost(req, resp);
     }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        super.doPost(req, resp);
+
+        Method method= (Method) HandlerMapping.get(req.getRequestURI());
+        resp.setCharacterEncoding("utf-8");
+        resp.setContentType("text/html;charset=utf-8");
+        PrintWriter out = resp.getWriter();
+        if(method==null)
+        {
+            out.print("404");
+        }
+        try {
+            Object Controller=Singleton.get(method.getDeclaringClass().getName());
+            String string= (String) method.invoke(Controller,null);
+            out.print(string);
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        }finally {
+            out.close();
+        }
+
     }
 
     @Override
@@ -47,43 +73,10 @@ public class MyDispatcherServlet extends HttpServlet {
         //扫描注解
         doScan();
         //IOC注入
-        ioc();
-
+        Autowire();
         //映射url
-//        HeaderMap();
-
+       UrlMaping();
     }
-
-    private void ioc() {
-
-        for(String name:Names)
-        {
-            try {
-                Class aclass = Class.forName(name);
-                Object bean=aclass.newInstance();
-                Field[] fields = bean.getClass().getDeclaredFields();
-                for(Field field:fields)
-                {
-                    if(field.isAnnotationPresent(Autowire.class))
-                    {
-                        String fieldName=field.getType().getName();
-                         Object object=Singleton.get(fieldName);
-//                        UserService object=new UserServiceImpl();
-                         if(object!=null)
-                         {
-                             field.setAccessible(true);
-                             field.set(object,null);
-                         }
-                    }
-                }
-
-            } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
-                e.printStackTrace();
-            }
-        }
-
-    }
-
     private void loadConfig(String parameter)   {
         SAXReader reader = new SAXReader();
         try {
@@ -91,7 +84,7 @@ public class MyDispatcherServlet extends HttpServlet {
             Element root = document.getRootElement();
             for (Iterator<Element> it = root.elementIterator(); it.hasNext();) {
                 Element element = it.next();
-                PagesPath.add(element.attribute("base-package").getValue());
+                Path.add(element.attribute("base-package").getValue());
             }
 
         } catch (DocumentException e) {
@@ -101,12 +94,11 @@ public class MyDispatcherServlet extends HttpServlet {
     private void doScan() {
         //1、读取class文件路径获取全限定名
         //2、扫描注解
-        if (PagesPath.isEmpty()) {
-            return;
-        }
+
         String root = Thread.currentThread().getContextClassLoader().getResource("").getPath();
-        for (int i = 0; i < PagesPath.size(); i++) {
-            String path = PagesPath.get(i).replaceAll("\\.", "/");
+
+        for (int i = 0; i < Path.size(); i++) {
+            String path = Path.get(i).replaceAll("\\.", "/");
             readFile(root + path);
         }
         for (int i = 0; i < Names.size(); i++) {
@@ -118,14 +110,8 @@ public class MyDispatcherServlet extends HttpServlet {
                         Singleton.put(c.getName(),aclass.newInstance());
                     }
                 }
-                else if (aclass.isAnnotationPresent(Controller.class)) {
-                    Singleton.put(aclass.getName(),aclass.newInstance());
-                }
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            } catch (InstantiationException e) {
+
+            } catch (ClassNotFoundException | IllegalAccessException |InstantiationException e) {
                 e.printStackTrace();
             }
 
@@ -150,8 +136,8 @@ public class MyDispatcherServlet extends HttpServlet {
                 if(files.get(i).getName().endsWith(".class"))
                 {
                     String ClassPath=files.get(i).getPath();
-                    String classes="\\classes\\";
-                    String name=ClassPath.substring(ClassPath.indexOf(classes)+classes.length(),ClassPath.lastIndexOf(".")).replace("\\",".");
+                    String classes="classes";
+                    String name=ClassPath.substring(ClassPath.indexOf(classes)+classes.length()+1,ClassPath.lastIndexOf(".")).replace(File.separator,".");
                     Names.add(name);
                 }
             }
@@ -159,15 +145,67 @@ public class MyDispatcherServlet extends HttpServlet {
 
     }
 
-    private String lower(char[] str) {
-        for(int i=0;i<str.length;i++)
+    private void UrlMaping() {
+        for(String name:Names)
         {
-            if(str[i]>='A'&&str[i]<='Z')
-            {
-                str[i]+=32;
+            try {
+                Class cl = Class.forName(name);
+                if(cl.isAnnotationPresent(Controller.class))
+                {
+
+                Mapping ClassMapping= (Mapping) cl.getAnnotation(Mapping.class);
+                Method[] methods = cl.getMethods();
+                    for(Method method:methods)
+                    {
+
+                        if(method.isAnnotationPresent(Mapping.class))
+                        {
+                            StringBuffer url=new StringBuffer();
+                            Mapping Mapping= method.getAnnotation(Mapping.class);
+                            if(ClassMapping!=null)
+                            {
+                                url.append(ClassMapping.value());
+                            }
+
+                            if(Mapping!=null)
+                            {
+                                url.append(Mapping.value());
+                            }
+                            HandlerMapping.put(url.toString(),method);
+                        }
+                    }
+                }
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+
+        }
+    }
+
+    private void Autowire() {
+
+        for(String name:Names)
+        {
+            try {
+                Class cl=Class.forName(name);
+                Field[] fields=cl.getDeclaredFields();
+                for(Field field:fields)
+                {
+                    if(field.isAnnotationPresent(Autowire.class)&&Singleton.get(cl.getName())==null) {
+                        field.setAccessible(true);
+                        Object object=cl.newInstance();
+                        field.set(object,Singleton.get(field.getType().getName()));
+                        Singleton.put(cl.getName(),object);
+                    }
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
-        return new String(str);
     }
+
+
+
 
 }

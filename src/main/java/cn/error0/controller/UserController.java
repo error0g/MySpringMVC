@@ -9,12 +9,18 @@ import cn.error0.services.UserService;
 @Mapping("/")
 public class UserController {
 
-    @Autowire
+     @Autowire
      private UserService service;
+
 
     @Mapping("getUser")
     public String getUser()
     {
         return service.getOneUser().toString();
+    }
+    @Mapping("hello")
+    public String printf()
+    {
+        return "Hello world";
     }
 }
