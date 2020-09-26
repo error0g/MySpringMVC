@@ -4,15 +4,13 @@ import cn.error0.Annotation.Autowire;
 import cn.error0.Annotation.Controller;
 import cn.error0.Annotation.Mapping;
 import cn.error0.Annotation.Service;
-import cn.error0.controller.UserController;
-import cn.error0.services.Impl.UserServiceImpl;
-import cn.error0.services.UserService;
+
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Element;
 import org.dom4j.io.SAXReader;
 
-
+import javax.enterprise.inject.Model;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -21,11 +19,11 @@ import javax.servlet.http.HttpServletResponse;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.util.*;
 
 public class MyDispatcherServlet extends HttpServlet {
@@ -47,22 +45,46 @@ public class MyDispatcherServlet extends HttpServlet {
         resp.setCharacterEncoding("utf-8");
         resp.setContentType("text/html;charset=utf-8");
         PrintWriter out = resp.getWriter();
-        if(method==null)
+        if(method!=null)
         {
+            Map<String, String[]> parameterMap = req.getParameterMap();
+            Set<String> keys = parameterMap.keySet();
+            List<Object> list=new LinkedList<>();
+            Parameter[] parameters = method.getParameters();
+            Iterator it=keys.iterator();
+
+            try {
+                for(int i=0;i<parameters.length||it.hasNext();i++) {
+                    //根据参数类型 转化类型
+                    Class<?> type = parameters[i].getType();
+                    switch (type.getName())
+                    {
+                        case "int":list.add(new Integer(parameterMap.get(it.next())[0]));break;
+                        case "char":list.add(new String(parameterMap.get(it.next())[0]).toCharArray()[0]);break;
+                        case "byte":list.add(new Byte(parameterMap.get(it.next())[0]));break;
+                        case "long":list.add(new Long(parameterMap.get(it.next())[0]));break;
+                        case "double":list.add(new Double(parameterMap.get(it.next())[0]));break;
+                        case "float":list.add(new Float(parameterMap.get(it.next())[0]));break;
+                        case "short":list.add(new Short(parameterMap.get(it.next())[0]));break;
+                        case "boolean":list.add(new Boolean(parameterMap.get(it.next())[0]));break;
+                        case "javax.servlet.http.HttpServletRequest":list.add(req);break;
+                        case "javax.servlet.http.HttpServletResponse":list.add(resp);break;
+                        default: list.add(type.cast(parameterMap.get(it.next())[0]));break;
+                    }
+                }
+
+                Object Controller=Singleton.get(method.getDeclaringClass().getName());
+                String string= (String) method.invoke(Controller, list.toArray());
+                out.print(string);
+            } catch (IllegalAccessException | InvocationTargetException  e) {
+                e.printStackTrace();
+            }
+        }
+        else {
             out.print("404");
         }
-        try {
-            Object Controller=Singleton.get(method.getDeclaringClass().getName());
-            String string= (String) method.invoke(Controller,null);
-            out.print(string);
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
-            e.printStackTrace();
-        }finally {
-            out.close();
-        }
 
+        out.close();
     }
 
     @Override

@@ -14,23 +14,7 @@ public class Test {
    @org.junit.Test
     public void getPropertyTest() throws IllegalAccessException, InstantiationException, ClassNotFoundException {
 
-        Map<String,Object> map= new HashMap();
-
-       Class cl=Class.forName("cn.error0.controller.UserController");
-       Object object=cl.newInstance();
-       System.out.println(object);
-        Field[] declaredFields =UserController.class.getDeclaredFields();
-        for(Field field:declaredFields)
-        {
-            field.setAccessible(true);
-                if(field.isAnnotationPresent(Autowire.class))
-                {
-                    field.set(object,UserServiceImpl.class.newInstance());
-
-                }
-        }
-        UserController controller= (UserController) object;
-       System.out.println( controller.getUser());
+       UserController controller=new UserController();
 
     }
 }
