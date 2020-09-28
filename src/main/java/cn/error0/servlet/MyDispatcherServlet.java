@@ -5,6 +5,8 @@ import cn.error0.Annotation.Controller;
 import cn.error0.Annotation.Mapping;
 import cn.error0.Annotation.Service;
 
+import cn.error0.Model.IModel;
+import cn.error0.Resolver.BaseResolver;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Element;
@@ -27,11 +29,16 @@ import java.lang.reflect.Parameter;
 import java.util.*;
 
 public class MyDispatcherServlet extends HttpServlet {
-
+    //需要扫描的目录
     private static List<String> Path=new ArrayList<>();
+    //类的全限定名称
     private static List<String> Names=new ArrayList<>();
-    private static Map<String,Object> Singleton=new HashMap<>();
+    //Bean容器
+   private static Map<String,Object> Singleton=new HashMap<>();
+   //url映射容器
     private static Map<String,Object> HandlerMapping=new HashMap<>();
+    //视图解析器
+    private  BaseResolver baseResolver=new BaseResolver();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -41,9 +48,12 @@ public class MyDispatcherServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
-        Method method= (Method) HandlerMapping.get(req.getRequestURI());
         resp.setCharacterEncoding("utf-8");
         resp.setContentType("text/html;charset=utf-8");
+        baseResolver.setPrefix("/");
+        baseResolver.setSuffix(".jsp");
+
+        Method method= (Method) HandlerMapping.get(req.getRequestURI());
         PrintWriter out = resp.getWriter();
         if(method!=null)
         {
@@ -52,6 +62,7 @@ public class MyDispatcherServlet extends HttpServlet {
             List<Object> list=new LinkedList<>();
             Parameter[] parameters = method.getParameters();
             Iterator it=keys.iterator();
+            IModel iModel=new IModel();
 
             try {
                 for(int i=0;i<parameters.length||it.hasNext();i++) {
@@ -69,13 +80,16 @@ public class MyDispatcherServlet extends HttpServlet {
                         case "boolean":list.add(new Boolean(parameterMap.get(it.next())[0]));break;
                         case "javax.servlet.http.HttpServletRequest":list.add(req);break;
                         case "javax.servlet.http.HttpServletResponse":list.add(resp);break;
+                        case "cn.error0.Model.IModel":list.add(iModel);break;
                         default: list.add(type.cast(parameterMap.get(it.next())[0]));break;
                     }
                 }
 
                 Object Controller=Singleton.get(method.getDeclaringClass().getName());
-                String string= (String) method.invoke(Controller, list.toArray());
-                out.print(string);
+                String view= (String) method.invoke(Controller, list.toArray());
+                baseResolver.setView(view);
+                baseResolver.setModel(iModel);
+                baseResolver.forward(req,resp);
             } catch (IllegalAccessException | InvocationTargetException  e) {
                 e.printStackTrace();
             }
@@ -83,12 +97,11 @@ public class MyDispatcherServlet extends HttpServlet {
         else {
             out.print("404");
         }
-
         out.close();
     }
 
     @Override
-    public void init(ServletConfig config) throws ServletException {
+    public void init(ServletConfig config)   {
         String Parameter=config.getInitParameter("contextConfigLocation");
         //加载相关配置
         loadConfig(Parameter);
@@ -226,8 +239,5 @@ public class MyDispatcherServlet extends HttpServlet {
             }
         }
     }
-
-
-
 
 }
