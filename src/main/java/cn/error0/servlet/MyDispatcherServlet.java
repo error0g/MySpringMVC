@@ -61,32 +61,34 @@ public class MyDispatcherServlet extends HttpServlet {
             Set<String> keys = parameterMap.keySet();
             List<Object> list=new LinkedList<>();
             Parameter[] parameters = method.getParameters();
-            Iterator it=keys.iterator();
+            Iterator iterator=keys.iterator();
             IModel iModel=new IModel();
 
             try {
-                for(int i=0;i<parameters.length||it.hasNext();i++) {
+                for(int i=0;i<parameters.length||iterator.hasNext();i++) {
                     //根据参数类型 转化类型
                     Class<?> type = parameters[i].getType();
                     switch (type.getName())
                     {
-                        case "int":list.add(new Integer(parameterMap.get(it.next())[0]));break;
-                        case "char":list.add(new String(parameterMap.get(it.next())[0]).toCharArray()[0]);break;
-                        case "byte":list.add(new Byte(parameterMap.get(it.next())[0]));break;
-                        case "long":list.add(new Long(parameterMap.get(it.next())[0]));break;
-                        case "double":list.add(new Double(parameterMap.get(it.next())[0]));break;
-                        case "float":list.add(new Float(parameterMap.get(it.next())[0]));break;
-                        case "short":list.add(new Short(parameterMap.get(it.next())[0]));break;
-                        case "boolean":list.add(new Boolean(parameterMap.get(it.next())[0]));break;
+                        case "int":list.add(new Integer(parameterMap.get(iterator.next())[0]));break;
+                        case "char":list.add(new String(parameterMap.get(iterator.next())[0]).toCharArray()[0]);break;
+                        case "byte":list.add(new Byte(parameterMap.get(iterator.next())[0]));break;
+                        case "long":list.add(new Long(parameterMap.get(iterator.next())[0]));break;
+                        case "double":list.add(new Double(parameterMap.get(iterator.next())[0]));break;
+                        case "float":list.add(new Float(parameterMap.get(iterator.next())[0]));break;
+                        case "short":list.add(new Short(parameterMap.get(iterator.next())[0]));break;
+                        case "boolean":list.add(new Boolean(parameterMap.get(iterator.next())[0]));break;
                         case "javax.servlet.http.HttpServletRequest":list.add(req);break;
                         case "javax.servlet.http.HttpServletResponse":list.add(resp);break;
                         case "cn.error0.Model.IModel":list.add(iModel);break;
-                        default: list.add(type.cast(parameterMap.get(it.next())[0]));break;
+                        default: list.add(type.cast(parameterMap.get(iterator.next())[0]));break;
                     }
                 }
 
+
                 Object Controller=Singleton.get(method.getDeclaringClass().getName());
                 String view= (String) method.invoke(Controller, list.toArray());
+
                 baseResolver.setView(view);
                 baseResolver.setModel(iModel);
                 baseResolver.forward(req,resp);
@@ -228,6 +230,7 @@ public class MyDispatcherServlet extends HttpServlet {
                 {
                     if(field.isAnnotationPresent(Autowire.class)&&Singleton.get(cl.getName())==null) {
                         field.setAccessible(true);
+                        //创建Bean实例并加入Singleton容器
                         Object object=cl.newInstance();
                         field.set(object,Singleton.get(field.getType().getName()));
                         Singleton.put(cl.getName(),object);
