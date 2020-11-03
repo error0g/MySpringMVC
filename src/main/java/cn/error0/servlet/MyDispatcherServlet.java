@@ -68,24 +68,55 @@ public class MyDispatcherServlet extends HttpServlet {
                 for(int i=0;i<parameters.length||iterator.hasNext();i++) {
                     //根据参数类型 转化类型
                     Class<?> type = parameters[i].getType();
-                    switch (type.getName())
-                    {
-                        case "int":list.add(new Integer(parameterMap.get(iterator.next())[0]));break;
-                        case "char":list.add(new String(parameterMap.get(iterator.next())[0]).toCharArray()[0]);break;
-                        case "byte":list.add(new Byte(parameterMap.get(iterator.next())[0]));break;
-                        case "long":list.add(new Long(parameterMap.get(iterator.next())[0]));break;
-                        case "double":list.add(new Double(parameterMap.get(iterator.next())[0]));break;
-                        case "float":list.add(new Float(parameterMap.get(iterator.next())[0]));break;
-                        case "short":list.add(new Short(parameterMap.get(iterator.next())[0]));break;
-                        case "boolean":list.add(new Boolean(parameterMap.get(iterator.next())[0]));break;
-                        case "javax.servlet.http.HttpServletRequest":list.add(req);break;
-                        case "javax.servlet.http.HttpServletResponse":list.add(resp);break;
-                        case "cn.error0.Model.IModel":list.add(iModel);break;
-                        default: list.add(type.cast(parameterMap.get(iterator.next())[0]));break;
+                    if(type.equals(Integer.class)) {
+                        list.add(new Integer(parameterMap.get(iterator.next())[0]));
                     }
+                    else if(type.equals(Character.class))
+                    {
+                        list.add((parameterMap.get(iterator.next())[0]));
+                    }
+                    else if(type.equals(Byte.class))
+                    {
+                        list.add(new Byte(parameterMap.get(iterator.next())[0]));
+                    }
+                    else if(type.equals(Long.class))
+                    {
+                        list.add(new Long(parameterMap.get(iterator.next())[0]));
+                    }
+                    else if(type.equals(Double.class))
+                    {
+                        list.add(new Double(parameterMap.get(iterator.next())[0]));
+                    }
+                    else if(type.equals(Float.class))
+                    {
+                        list.add(new Float(parameterMap.get(iterator.next())[0]));
+                    }
+                    else if(type.equals(Short.class))
+                    {
+                        list.add(new Short(parameterMap.get(iterator.next())[0]));
+                    }
+                    else if(type.equals(Boolean.class))
+                    {
+                        list.add(new Boolean(parameterMap.get(iterator.next())[0]));
+                    }
+                    else if(type.equals(IModel.class))
+                    {
+                        list.add(iModel);
+                    }
+                    else if(type.equals(HttpServletRequest.class))
+                    {
+                        list.add(req);
+                    }
+                    else if(type.equals(HttpServletResponse.class))
+                    {
+                        list.add(resp);
+                    }
+                    else {
+                        list.add(type.cast(parameterMap.get(iterator.next())[0]));
+                    }
+
                 }
-
-
+                
                 Object Controller=Singleton.get(method.getDeclaringClass().getName());
                 String view= (String) method.invoke(Controller, list.toArray());
 
