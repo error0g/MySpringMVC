@@ -17,13 +17,8 @@ public class UserController {
      private UserService service;
 
 
-    @Mapping("getUser")
-    public String getUser()
-    {
-        return service.getOneUser().toString();
-    }
-    @Mapping("hello")
-    public String printf(String msg, int code, boolean flag, char c, HttpServletRequest req,IModel model)
+    @Mapping("print")
+    public String print(String msg, int code, boolean flag, HttpServletRequest req,IModel model)
     {
 
         model.put("User", service.getOneUser());

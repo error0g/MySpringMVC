@@ -22,10 +22,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
+import java.lang.reflect.*;
 import java.util.*;
 
 public class MyDispatcherServlet extends HttpServlet {
@@ -41,12 +38,12 @@ public class MyDispatcherServlet extends HttpServlet {
     private  BaseResolver baseResolver=new BaseResolver();
 
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws  IOException {
         this.doPost(req, resp);
     }
 
     @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
 
         resp.setCharacterEncoding("utf-8");
         resp.setContentType("text/html;charset=utf-8");
@@ -65,55 +62,57 @@ public class MyDispatcherServlet extends HttpServlet {
             IModel iModel=new IModel();
 
             try {
-                for(int i=0;i<parameters.length||iterator.hasNext();i++) {
+                for(Parameter parameter:parameters) {
                     //根据参数类型 转化类型
-                    Class<?> type = parameters[i].getType();
-                    if(type.equals(Integer.class)) {
+                    Class<?> type = parameter.getType();
+                    if(int.class.equals(type)) {
                         list.add(new Integer(parameterMap.get(iterator.next())[0]));
                     }
-                    else if(type.equals(Character.class))
+                    else if(char.class.equals(type))
                     {
-                        list.add((parameterMap.get(iterator.next())[0]));
+                        list.add((parameterMap.get(iterator.next())[0]).charAt(0));
                     }
-                    else if(type.equals(Byte.class))
+                    else if(byte.class.equals(type))
                     {
                         list.add(new Byte(parameterMap.get(iterator.next())[0]));
                     }
-                    else if(type.equals(Long.class))
+                    else if(long.class.equals(type))
                     {
                         list.add(new Long(parameterMap.get(iterator.next())[0]));
                     }
-                    else if(type.equals(Double.class))
+                    else if(double.class.equals( type))
                     {
                         list.add(new Double(parameterMap.get(iterator.next())[0]));
                     }
-                    else if(type.equals(Float.class))
+                    else if(float.class.equals( type))
                     {
                         list.add(new Float(parameterMap.get(iterator.next())[0]));
                     }
-                    else if(type.equals(Short.class))
+                    else if(short.class.equals( type))
                     {
                         list.add(new Short(parameterMap.get(iterator.next())[0]));
                     }
-                    else if(type.equals(Boolean.class))
+                    else if(boolean.class.equals( type))
                     {
                         list.add(new Boolean(parameterMap.get(iterator.next())[0]));
                     }
-                    else if(type.equals(IModel.class))
+                    else if(String.class.equals( type))
+                    {
+                        list.add(parameterMap.get(iterator.next())[0]);
+                    }
+                    else if(IModel.class.equals(type))
                     {
                         list.add(iModel);
                     }
-                    else if(type.equals(HttpServletRequest.class))
+                    else if(HttpServletRequest.class.equals(type))
                     {
                         list.add(req);
                     }
-                    else if(type.equals(HttpServletResponse.class))
+                    else if(HttpServletResponse.class.equals(type))
                     {
                         list.add(resp);
                     }
-                    else {
-                        list.add(type.cast(parameterMap.get(iterator.next())[0]));
-                    }
+
 
                 }
 
