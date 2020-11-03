@@ -11,10 +11,10 @@ import java.util.regex.Matcher;
 
 public class Test {
 
-   @org.junit.Test
+    @org.junit.Test
     public void getPropertyTest() throws IllegalAccessException, InstantiationException, ClassNotFoundException {
 
-       UserController controller=new UserController();
+        UserController controller=new UserController();
 
     }
 }

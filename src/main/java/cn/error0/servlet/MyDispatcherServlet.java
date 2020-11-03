@@ -116,7 +116,7 @@ public class MyDispatcherServlet extends HttpServlet {
                     }
 
                 }
-                
+
                 Object Controller=Singleton.get(method.getDeclaringClass().getName());
                 String view= (String) method.invoke(Controller, list.toArray());
 
